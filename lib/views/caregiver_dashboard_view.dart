@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../theme/app_theme.dart';
+import 'link_patient_view.dart';
 import 'login_view.dart';
+import 'patients_list_view.dart';
 
 class CaregiverDashboardView extends StatelessWidget {
   const CaregiverDashboardView({super.key});
@@ -30,6 +33,8 @@ class CaregiverDashboardView extends StatelessWidget {
       final prefs = await SharedPreferences.getInstance();
       await prefs.clear();
 
+      await Supabase.instance.client.auth.signOut();
+
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(builder: (_) => const LoginView()),
@@ -42,54 +47,62 @@ class CaregiverDashboardView extends StatelessWidget {
     required IconData icon,
     required String title,
     required String subtitle,
+    required VoidCallback onTap,
   }) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      margin: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
-        color: AppTheme.cardColor,
-        borderRadius: BorderRadius.circular(24),
-      ),
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 26,
-            backgroundColor: const Color(0xFFEFF6FF),
-            child: Icon(icon, color: AppTheme.primary),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    color: AppTheme.textDark,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 5),
-                Text(
-                  subtitle,
-                  style: const TextStyle(
-                    color: AppTheme.textLight,
-                    fontSize: 14,
-                  ),
-                ),
-              ],
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(24),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
+        margin: const EdgeInsets.only(bottom: 16),
+        decoration: BoxDecoration(
+          color: AppTheme.cardColor,
+          borderRadius: BorderRadius.circular(24),
+        ),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 26,
+              backgroundColor: const Color(0xFFEFF6FF),
+              child: Icon(icon, color: AppTheme.primary),
             ),
-          ),
-          const Icon(Icons.arrow_forward_ios, size: 18),
-        ],
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      color: AppTheme.textDark,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(
+                      color: AppTheme.textLight,
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.arrow_forward_ios, size: 18),
+          ],
+        ),
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final caregiverId =
+        Supabase.instance.client.auth.currentUser?.id ?? 'Unknown';
+
     return Scaffold(
       backgroundColor: AppTheme.background,
       appBar: AppBar(
@@ -114,12 +127,50 @@ class CaregiverDashboardView extends StatelessWidget {
                 color: AppTheme.textDark,
               ),
             ),
+
             const SizedBox(height: 8),
+
             const Text(
-              'Monitor patients and medicine reminders.',
-              style: TextStyle(color: AppTheme.textLight, fontSize: 16),
+              'Link patients and monitor their medicine activity.',
+              style: TextStyle(
+                color: AppTheme.textLight,
+                fontSize: 16,
+              ),
             ),
-            const SizedBox(height: 26),
+
+            const SizedBox(height: 24),
+
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: AppTheme.cardColor,
+                borderRadius: BorderRadius.circular(24),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Your Caregiver ID',
+                    style: TextStyle(
+                      color: AppTheme.textLight,
+                      fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  SelectableText(
+                    caregiverId,
+                    style: const TextStyle(
+                      color: AppTheme.textDark,
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 24),
 
             Container(
               width: double.infinity,
@@ -131,7 +182,11 @@ class CaregiverDashboardView extends StatelessWidget {
               child: const Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(Icons.people_alt_outlined, color: Colors.white, size: 46),
+                  Icon(
+                    Icons.people_alt_outlined,
+                    color: Colors.white,
+                    size: 46,
+                  ),
                   SizedBox(height: 18),
                   Text(
                     'Patients Overview',
@@ -143,8 +198,11 @@ class CaregiverDashboardView extends StatelessWidget {
                   ),
                   SizedBox(height: 8),
                   Text(
-                    'You can add and monitor multiple patients.',
-                    style: TextStyle(color: Colors.white70, fontSize: 15),
+                    'Link existing patients by their Patient ID.',
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 15,
+                    ),
                   ),
                 ],
               ),
@@ -153,19 +211,31 @@ class CaregiverDashboardView extends StatelessWidget {
             const SizedBox(height: 24),
 
             actionCard(
-              icon: Icons.person_add_alt_1,
-              title: 'Add Patient',
-              subtitle: 'Create a new patient profile',
+              icon: Icons.link,
+              title: 'Link Patient',
+              subtitle: 'Connect an existing patient by ID',
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const LinkPatientView(),
+                  ),
+                );
+              },
             ),
+
             actionCard(
               icon: Icons.list_alt,
               title: 'Patients List',
-              subtitle: 'View and manage your patients',
-            ),
-            actionCard(
-              icon: Icons.notifications_active_outlined,
-              title: 'Alerts',
-              subtitle: 'View missed dose alerts',
+              subtitle: 'View and manage linked patients',
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const PatientsListView(),
+                  ),
+                );
+              },
             ),
           ],
         ),

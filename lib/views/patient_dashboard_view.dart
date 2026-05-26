@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../theme/app_theme.dart';
 import 'login_view.dart';
@@ -30,6 +31,8 @@ class PatientDashboardView extends StatelessWidget {
       final prefs = await SharedPreferences.getInstance();
       await prefs.clear();
 
+      await Supabase.instance.client.auth.signOut();
+
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(builder: (_) => const LoginView()),
@@ -38,37 +41,11 @@ class PatientDashboardView extends StatelessWidget {
     }
   }
 
-  Widget infoCard(IconData icon, String title, String value) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(
-          color: AppTheme.cardColor,
-          borderRadius: BorderRadius.circular(22),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(icon, color: AppTheme.primary, size: 30),
-            const SizedBox(height: 12),
-            Text(title, style: const TextStyle(color: AppTheme.textLight)),
-            const SizedBox(height: 6),
-            Text(
-              value,
-              style: const TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                color: AppTheme.textDark,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
+    final patientId =
+        Supabase.instance.client.auth.currentUser?.id ?? 'Unknown';
+
     return Scaffold(
       backgroundColor: AppTheme.background,
       appBar: AppBar(
@@ -93,12 +70,50 @@ class PatientDashboardView extends StatelessWidget {
                 color: AppTheme.textDark,
               ),
             ),
+
             const SizedBox(height: 8),
+
             const Text(
-              'Track your medicine reminders for today.',
-              style: TextStyle(color: AppTheme.textLight, fontSize: 16),
+              'Share your Patient ID with your caregiver.',
+              style: TextStyle(
+                color: AppTheme.textLight,
+                fontSize: 16,
+              ),
             ),
-            const SizedBox(height: 26),
+
+            const SizedBox(height: 24),
+
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: AppTheme.cardColor,
+                borderRadius: BorderRadius.circular(24),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Your Patient ID',
+                    style: TextStyle(
+                      color: AppTheme.textLight,
+                      fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  SelectableText(
+                    patientId,
+                    style: const TextStyle(
+                      color: AppTheme.textDark,
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 24),
 
             Container(
               width: double.infinity,
@@ -123,30 +138,13 @@ class PatientDashboardView extends StatelessWidget {
                   SizedBox(height: 8),
                   Text(
                     'No upcoming medicine reminders yet.',
-                    style: TextStyle(color: Colors.white70, fontSize: 15),
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 15,
+                    ),
                   ),
                 ],
               ),
-            ),
-
-            const SizedBox(height: 22),
-
-            Row(
-              children: [
-                infoCard(Icons.notifications_active_outlined, 'Reminders', '0'),
-                const SizedBox(width: 14),
-                infoCard(Icons.check_circle_outline, 'Taken', '0'),
-              ],
-            ),
-
-            const SizedBox(height: 14),
-
-            Row(
-              children: [
-                infoCard(Icons.warning_amber_rounded, 'Missed', '0'),
-                const SizedBox(width: 14),
-                infoCard(Icons.snooze, 'Snoozed', '0'),
-              ],
             ),
           ],
         ),

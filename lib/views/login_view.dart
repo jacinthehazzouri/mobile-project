@@ -35,6 +35,8 @@ class _LoginViewState extends State<LoginView> {
       final prefs = await SharedPreferences.getInstance();
 
       await prefs.setBool('isLoggedIn', true);
+      await prefs.setString('userId', profile.id);
+      await prefs.setString('role', profile.role);
 
       if (!mounted) return;
 
@@ -57,9 +59,7 @@ class _LoginViewState extends State<LoginView> {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Login failed: $e'),
-        ),
+        SnackBar(content: Text('Login failed: $e')),
       );
     }
 
@@ -81,12 +81,8 @@ class _LoginViewState extends State<LoginView> {
       backgroundColor: AppTheme.background,
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(
-            horizontal: 24,
-            vertical: 36,
-          ),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 36),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               const SizedBox(height: 30),
 
@@ -139,7 +135,6 @@ class _LoginViewState extends State<LoginView> {
               TextField(
                 controller: emailController,
                 keyboardType: TextInputType.emailAddress,
-                style: const TextStyle(fontSize: 14),
                 decoration: const InputDecoration(
                   labelText: 'Email',
                   prefixIcon: Icon(Icons.email_outlined),
