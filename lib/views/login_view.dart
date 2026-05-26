@@ -3,8 +3,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../controllers/auth_controller.dart';
 import '../theme/app_theme.dart';
-import 'home_view.dart';
+
 import 'register_view.dart';
+import 'patient_dashboard_view.dart';
+import 'caregiver_dashboard_view.dart';
 
 class LoginView extends StatefulWidget {
   const LoginView({super.key});
@@ -25,22 +27,32 @@ class _LoginViewState extends State<LoginView> {
     setState(() => loading = true);
 
     try {
-      await authController.login(
+      final profile = await authController.login(
         emailController.text.trim(),
         passwordController.text.trim(),
       );
 
       final prefs = await SharedPreferences.getInstance();
+
       await prefs.setBool('isLoggedIn', true);
 
       if (!mounted) return;
 
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (_) => const HomeView(),
-        ),
-      );
+      if (profile.role == 'caregiver') {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const CaregiverDashboardView(),
+          ),
+        );
+      } else {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => const PatientDashboardView(),
+          ),
+        );
+      }
     } catch (e) {
       if (!mounted) return;
 
@@ -69,7 +81,10 @@ class _LoginViewState extends State<LoginView> {
       backgroundColor: AppTheme.background,
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 36),
+          padding: const EdgeInsets.symmetric(
+            horizontal: 24,
+            vertical: 36,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
