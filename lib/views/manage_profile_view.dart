@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../theme/app_theme.dart';
@@ -24,6 +25,15 @@ class _ManageProfileViewState extends State<ManageProfileView> {
     loadProfile();
   }
 
+  void showToast(String message) {
+    Fluttertoast.showToast(
+      msg: message,
+      toastLength: Toast.LENGTH_SHORT,
+      gravity: ToastGravity.BOTTOM,
+      fontSize: 16,
+    );
+  }
+
   Future<void> loadProfile() async {
     try {
       final userId = Supabase.instance.client.auth.currentUser!.id;
@@ -39,10 +49,7 @@ class _ManageProfileViewState extends State<ManageProfileView> {
       role = data['role'] ?? '';
     } catch (e) {
       if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to load profile: $e')),
-      );
+      showToast('Failed to load profile');
     }
 
     if (mounted) {
@@ -63,17 +70,12 @@ class _ManageProfileViewState extends State<ManageProfileView> {
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Profile updated successfully')),
-      );
+      showToast('Profile updated successfully');
 
       Navigator.pop(context, true);
     } catch (e) {
       if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to update profile: $e')),
-      );
+      showToast('Failed to update profile');
     }
 
     if (mounted) {
@@ -115,9 +117,7 @@ class _ManageProfileViewState extends State<ManageProfileView> {
                   size: 42,
                 ),
               ),
-
               const SizedBox(height: 24),
-
               const Text(
                 'Update Profile Info',
                 style: TextStyle(
@@ -126,9 +126,7 @@ class _ManageProfileViewState extends State<ManageProfileView> {
                   color: AppTheme.textDark,
                 ),
               ),
-
               const SizedBox(height: 8),
-
               Text(
                 'Role: $role',
                 style: const TextStyle(
@@ -136,9 +134,7 @@ class _ManageProfileViewState extends State<ManageProfileView> {
                   fontSize: 15,
                 ),
               ),
-
               const SizedBox(height: 30),
-
               TextField(
                 controller: nameController,
                 decoration: const InputDecoration(
@@ -146,9 +142,7 @@ class _ManageProfileViewState extends State<ManageProfileView> {
                   prefixIcon: Icon(Icons.person_outline),
                 ),
               ),
-
               const SizedBox(height: 15),
-
               TextField(
                 controller: phoneController,
                 keyboardType: TextInputType.phone,
@@ -157,9 +151,7 @@ class _ManageProfileViewState extends State<ManageProfileView> {
                   prefixIcon: Icon(Icons.phone_outlined),
                 ),
               ),
-
               const SizedBox(height: 28),
-
               SizedBox(
                 width: double.infinity,
                 height: 54,

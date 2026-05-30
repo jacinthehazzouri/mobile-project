@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../theme/app_theme.dart';
@@ -41,18 +42,20 @@ class _RegisterViewState extends State<RegisterView> {
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Account created successfully. Check your email.'),
-        ),
+      Fluttertoast.showToast(
+        msg: 'Account created successfully. Check your email.',
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
       );
 
       Navigator.pop(context);
     } catch (e) {
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Registration failed: $e')),
+      Fluttertoast.showToast(
+        msg: 'Registration failed',
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
       );
     }
 
@@ -79,7 +82,10 @@ class _RegisterViewState extends State<RegisterView> {
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 26),
+          padding: const EdgeInsets.symmetric(
+            horizontal: 24,
+            vertical: 26,
+          ),
           child: Column(
             children: [
               Container(

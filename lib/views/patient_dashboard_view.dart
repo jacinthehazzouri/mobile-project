@@ -5,6 +5,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../theme/app_theme.dart';
 import 'login_view.dart';
 import 'manage_profile_view.dart';
+import 'package:flutter/services.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 
 class PatientDashboardView extends StatefulWidget {
   const PatientDashboardView({super.key});
@@ -30,18 +32,51 @@ class _PatientDashboardViewState extends State<PatientDashboardView> {
     final shouldLogout = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Logout'),
-        content: const Text('Are you sure you want to logout?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        title: const Center(
+          child: Text(
+            'Logout',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+            ),
           ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Logout'),
-          ),
-        ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.logout,
+              color: AppTheme.primary,
+              size: 60,
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Are you sure you want to logout?',
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text('Cancel'),
+                ),
+                const SizedBox(width: 12),
+                SizedBox(
+                  width: 110,
+                  height: 45,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.pop(context, true),
+                    child: const Text('Logout'),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
 
@@ -55,7 +90,9 @@ class _PatientDashboardViewState extends State<PatientDashboardView> {
 
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(builder: (_) => const LoginView()),
+        MaterialPageRoute(
+          builder: (_) => const LoginView(),
+        ),
             (route) => false,
       );
     }
@@ -434,13 +471,34 @@ class _PatientDashboardViewState extends State<PatientDashboardView> {
                     style: TextStyle(color: AppTheme.textLight, fontSize: 14),
                   ),
                   const SizedBox(height: 8),
-                  SelectableText(
-                    patientId,
-                    style: const TextStyle(
-                      color: AppTheme.textDark,
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: SelectableText(
+                          patientId,
+                          style: const TextStyle(
+                            color: AppTheme.textDark,
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.copy),
+                        tooltip: 'Copy ID',
+                        onPressed: () async {
+                          await Clipboard.setData(
+                            ClipboardData(text: patientId),
+                          );
+
+                          Fluttertoast.showToast(
+                            msg: 'ID copied',
+                            toastLength: Toast.LENGTH_SHORT,
+                            gravity: ToastGravity.BOTTOM,
+                          );
+                        },
+                      ),
+                    ],
                   ),
                 ],
               ),

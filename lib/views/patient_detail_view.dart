@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../theme/app_theme.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 
 class PatientDetailView extends StatefulWidget {
   final String patientId;
@@ -108,17 +109,23 @@ class _PatientDetailViewState extends State<PatientDetailView>
   }
 
   void _showError(String msg) {
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
-    }
+    if (!mounted) return;
+
+    Fluttertoast.showToast(
+      msg: msg,
+      toastLength: Toast.LENGTH_SHORT,
+      gravity: ToastGravity.BOTTOM,
+    );
   }
 
   void _showSuccess(String msg) {
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(msg), backgroundColor: Colors.green),
-      );
-    }
+    if (!mounted) return;
+
+    Fluttertoast.showToast(
+      msg: msg,
+      toastLength: Toast.LENGTH_SHORT,
+      gravity: ToastGravity.BOTTOM,
+    );
   }
 
   // ════════════════════════════════════════════════════════════
