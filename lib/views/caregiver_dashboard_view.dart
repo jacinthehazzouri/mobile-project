@@ -7,26 +7,53 @@ import 'link_patient_view.dart';
 import 'login_view.dart';
 import 'manage_profile_view.dart';
 import 'patients_list_view.dart';
+import 'package:flutter/services.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 
-class CaregiverDashboardView extends StatelessWidget {
+class CaregiverDashboardView extends StatefulWidget {
   const CaregiverDashboardView({super.key});
 
+  @override
+  State<CaregiverDashboardView> createState() => _CaregiverDashboardViewState();
+}
+
+class _CaregiverDashboardViewState extends State<CaregiverDashboardView> {
   Future<void> logout(BuildContext context) async {
     final shouldLogout = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Logout'),
-        content: const Text('Are you sure you want to logout?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Logout'),
-          ),
-        ],
+        title: const Text(
+          'Logout',
+          textAlign: TextAlign.center,
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Are you sure you want to logout?',
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text('Cancel'),
+                ),
+                const SizedBox(width: 12),
+                SizedBox(
+                  width: 100,
+                  height: 44,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.pop(context, true),
+                    child: const Text('Logout'),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
 
@@ -35,6 +62,8 @@ class CaregiverDashboardView extends StatelessWidget {
       await prefs.clear();
 
       await Supabase.instance.client.auth.signOut();
+
+      if (!context.mounted) return;
 
       Navigator.pushAndRemoveUntil(
         context,
@@ -75,23 +104,23 @@ class CaregiverDashboardView extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 30),
-
             ListTile(
               leading: const Icon(Icons.manage_accounts_outlined),
               title: const Text('Manage Profile Info'),
-              onTap: () {
+              onTap: () async {
                 Navigator.pop(context);
-                Navigator.push(
+
+                await Navigator.push(
                   context,
                   MaterialPageRoute(
                     builder: (_) => const ManageProfileView(),
                   ),
                 );
+
+                setState(() {});
               },
             ),
-
             const Spacer(),
-
             Padding(
               padding: const EdgeInsets.all(20),
               child: SizedBox(
@@ -138,7 +167,6 @@ class CaregiverDashboardView extends StatelessWidget {
               child: Icon(icon, color: AppTheme.primary),
             ),
             const SizedBox(width: 16),
-
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -162,7 +190,6 @@ class CaregiverDashboardView extends StatelessWidget {
                 ],
               ),
             ),
-
             const Icon(Icons.arrow_forward_ios, size: 18),
           ],
         ),
@@ -201,8 +228,7 @@ class CaregiverDashboardView extends StatelessWidget {
             FutureBuilder<Map<String, dynamic>>(
               future: getProfile(),
               builder: (context, snapshot) {
-                final name =
-                snapshot.hasData ? snapshot.data!['name'] : '';
+                final name = snapshot.hasData ? snapshot.data!['name'] : '';
 
                 return Text(
                   name == '' ? 'Hi 👋' : 'Hi $name 👋',
@@ -214,16 +240,12 @@ class CaregiverDashboardView extends StatelessWidget {
                 );
               },
             ),
-
             const SizedBox(height: 8),
-
             const Text(
               'Link patients and monitor their medicine activity.',
               style: TextStyle(color: AppTheme.textLight, fontSize: 16),
             ),
-
             const SizedBox(height: 24),
-
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(20),
@@ -239,20 +261,39 @@ class CaregiverDashboardView extends StatelessWidget {
                     style: TextStyle(color: AppTheme.textLight, fontSize: 14),
                   ),
                   const SizedBox(height: 8),
-                  SelectableText(
-                    caregiverId,
-                    style: const TextStyle(
-                      color: AppTheme.textDark,
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: SelectableText(
+                          caregiverId,
+                          style: const TextStyle(
+                            color: AppTheme.textDark,
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.copy),
+                        tooltip: 'Copy ID',
+                        onPressed: () async {
+                          await Clipboard.setData(
+                            ClipboardData(text: caregiverId),
+                          );
+
+                          Fluttertoast.showToast(
+                            msg: 'ID copied',
+                            toastLength: Toast.LENGTH_SHORT,
+                            gravity: ToastGravity.BOTTOM,
+                          );
+                        },
+                      ),
+                    ],
                   ),
                 ],
               ),
             ),
-
             const SizedBox(height: 24),
-
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(24),
@@ -281,9 +322,7 @@ class CaregiverDashboardView extends StatelessWidget {
                 ],
               ),
             ),
-
             const SizedBox(height: 24),
-
             actionCard(
               icon: Icons.link,
               title: 'Link Patient',
@@ -297,7 +336,6 @@ class CaregiverDashboardView extends StatelessWidget {
                 );
               },
             ),
-
             actionCard(
               icon: Icons.list_alt,
               title: 'Patients List',

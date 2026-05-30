@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../controllers/auth_controller.dart';
@@ -58,8 +59,10 @@ class _LoginViewState extends State<LoginView> {
     } catch (e) {
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Login failed: $e')),
+      Fluttertoast.showToast(
+        msg: 'Login failed',
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
       );
     }
 
@@ -85,7 +88,6 @@ class _LoginViewState extends State<LoginView> {
           child: Column(
             children: [
               const SizedBox(height: 30),
-
               Container(
                 width: 86,
                 height: 86,
@@ -106,9 +108,7 @@ class _LoginViewState extends State<LoginView> {
                   size: 44,
                 ),
               ),
-
               const SizedBox(height: 24),
-
               const Text(
                 'Welcome Back',
                 style: TextStyle(
@@ -117,9 +117,7 @@ class _LoginViewState extends State<LoginView> {
                   color: AppTheme.textDark,
                 ),
               ),
-
               const SizedBox(height: 8),
-
               const Text(
                 'Login to manage your medicine reminders and smart medbox.',
                 textAlign: TextAlign.center,
@@ -129,9 +127,7 @@ class _LoginViewState extends State<LoginView> {
                   height: 1.5,
                 ),
               ),
-
               const SizedBox(height: 34),
-
               TextField(
                 controller: emailController,
                 keyboardType: TextInputType.emailAddress,
@@ -140,9 +136,7 @@ class _LoginViewState extends State<LoginView> {
                   prefixIcon: Icon(Icons.email_outlined),
                 ),
               ),
-
               const SizedBox(height: 16),
-
               TextField(
                 controller: passwordController,
                 obscureText: true,
@@ -151,9 +145,7 @@ class _LoginViewState extends State<LoginView> {
                   prefixIcon: Icon(Icons.lock_outline),
                 ),
               ),
-
               const SizedBox(height: 26),
-
               SizedBox(
                 width: double.infinity,
                 height: 54,
@@ -171,9 +163,7 @@ class _LoginViewState extends State<LoginView> {
                       : const Text('Login'),
                 ),
               ),
-
               const SizedBox(height: 18),
-
               TextButton(
                 onPressed: () {
                   Navigator.push(

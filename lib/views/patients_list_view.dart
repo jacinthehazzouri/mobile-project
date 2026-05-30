@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
 import '../theme/app_theme.dart';
-import 'patient_detail_view.dart'; // ← new screen we create below
+import 'patient_detail_view.dart';
 
 class PatientsListView extends StatefulWidget {
   const PatientsListView({super.key});
@@ -11,136 +13,183 @@ class PatientsListView extends StatefulWidget {
 }
 
 class _PatientsListViewState extends State<PatientsListView> {
-  final supabase = Supabase.instance.client;
+  bool isLoading = true;
+  List<Map<String, dynamic>> patients = [];
 
-  Future<List<Map<String, dynamic>>> getLinkedPatients() async {
-    final caregiver = supabase.auth.currentUser;
-    if (caregiver == null) throw Exception('Not logged in');
+  @override
+  void initState() {
+    super.initState();
+    loadPatients();
+  }
 
-    final data = await supabase
-        .from('caregiver_patients')
-        .select('patient:profiles!caregiver_patients_patient_id_fkey(id, name, role, phone)')
-        .eq('caregiver_id', caregiver.id);
+  Future<void> loadPatients() async {
+    try {
+      final caregiverId = Supabase.instance.client.auth.currentUser!.id;
 
-    return List<Map<String, dynamic>>.from(data);
+      final response = await Supabase.instance.client
+          .from('caregiver_patients')
+          .select('patient_id, profiles!caregiver_patients_patient_id_fkey(id, name, phone)')
+          .eq('caregiver_id', caregiverId);
+
+      setState(() {
+        patients = List<Map<String, dynamic>>.from(response);
+        isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        isLoading = false;
+      });
+
+      Fluttertoast.showToast(
+        msg: 'Failed to load patients',
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+      );
+    }
+  }
+
+  Future<void> deletePatientLink(String patientId) async {
+    try {
+      final caregiverId = Supabase.instance.client.auth.currentUser!.id;
+
+      await Supabase.instance.client
+          .from('caregiver_patients')
+          .delete()
+          .eq('caregiver_id', caregiverId)
+          .eq('patient_id', patientId);
+
+      await loadPatients();
+
+      Fluttertoast.showToast(
+        msg: 'Patient removed successfully',
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+      );
+    } catch (e) {
+      Fluttertoast.showToast(
+        msg: 'Failed to remove patient',
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+      );
+    }
+  }
+
+  Future<void> confirmDelete(String patientId, String patientName) async {
+    final shouldDelete = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text(
+          'Remove Patient',
+          textAlign: TextAlign.center,
+        ),
+        content: Text(
+          'Are you sure you want to remove $patientName from your patient list?',
+          textAlign: TextAlign.center,
+        ),
+        actionsAlignment: MainAxisAlignment.center,
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          SizedBox(
+            width: 110,
+            height: 44,
+            child: ElevatedButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Remove'),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldDelete == true) {
+      await deletePatientLink(patientId);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.background,
-      appBar: AppBar(title: const Text('My Patients')),
-      body: FutureBuilder<List<Map<String, dynamic>>>(
-        future: getLinkedPatients(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          }
+      appBar: AppBar(
+        title: const Text('Patients List'),
+      ),
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : patients.isEmpty
+          ? const Center(
+        child: Text(
+          'No patients linked yet.',
+          style: TextStyle(
+            color: AppTheme.textLight,
+            fontSize: 16,
+          ),
+        ),
+      )
+          : ListView.builder(
+        padding: const EdgeInsets.all(24),
+        itemCount: patients.length,
+        itemBuilder: (context, index) {
+          final patient =
+          patients[index]['profiles'] as Map<String, dynamic>;
 
-          final patients = snapshot.data ?? [];
+          final patientId = patient['id'];
+          final patientName = patient['name'] ?? 'Unknown Patient';
+          final patientPhone = patient['phone'] ?? 'No phone number';
 
-          if (patients.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.people_outline, size: 64,
-                      color: AppTheme.textLight.withOpacity(0.4)),
-                  const SizedBox(height: 16),
-                  const Text('No linked patients yet.',
-                      style: TextStyle(fontSize: 16, color: AppTheme.textLight)),
-                  const SizedBox(height: 8),
-                  const Text('Use "Link Patient" to add one.',
-                      style: TextStyle(fontSize: 13, color: AppTheme.textLight)),
-                ],
+          return Container(
+            margin: const EdgeInsets.only(bottom: 16),
+            decoration: BoxDecoration(
+              color: AppTheme.cardColor,
+              borderRadius: BorderRadius.circular(24),
+            ),
+            child: ListTile(
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 18,
+                vertical: 10,
               ),
-            );
-          }
-
-          return ListView.builder(
-            padding: const EdgeInsets.all(24),
-            itemCount: patients.length,
-            itemBuilder: (context, index) {
-              final patient = patients[index]['patient'];
-              final patientId   = patient['id'] as String;
-              final patientName = patient['name'] ?? 'Unknown';
-              final patientPhone = patient['phone'] ?? 'No phone';
-
-              return GestureDetector(
-                // ── Tap → open patient detail screen ──────────
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => PatientDetailView(
-                        patientId:   patientId,
-                        patientName: patientName,
-                      ),
-                    ),
-                  );
-                },
-                child: Container(
-                  margin: const EdgeInsets.only(bottom: 16),
-                  padding: const EdgeInsets.all(18),
-                  decoration: BoxDecoration(
-                    color: AppTheme.cardColor,
-                    borderRadius: BorderRadius.circular(22),
-                    // Subtle shadow to indicate it's tappable
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
-                        blurRadius: 12,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      // Avatar
-                      CircleAvatar(
-                        radius: 28,
-                        backgroundColor: AppTheme.primary.withOpacity(0.1),
-                        child: Text(
-                          patientName.isNotEmpty
-                              ? patientName[0].toUpperCase()
-                              : '?',
-                          style: const TextStyle(
-                            fontSize: 22, fontWeight: FontWeight.bold,
-                            color: AppTheme.primary,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-
-                      // Name + phone
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(patientName,
-                                style: const TextStyle(
-                                  fontSize: 17, fontWeight: FontWeight.bold,
-                                  color: AppTheme.textDark,
-                                )),
-                            const SizedBox(height: 4),
-                            Text(patientPhone,
-                                style: const TextStyle(
-                                    color: AppTheme.textLight, fontSize: 13)),
-                          ],
-                        ),
-                      ),
-
-                      // Arrow indicator — shows it's tappable
-                      const Icon(Icons.arrow_forward_ios,
-                          size: 16, color: AppTheme.textLight),
-                    ],
-                  ),
+              leading: const CircleAvatar(
+                backgroundColor: AppTheme.primary,
+                child: Icon(
+                  Icons.person,
+                  color: Colors.white,
                 ),
-              );
-            },
+              ),
+              title: Text(
+                patientName,
+                style: const TextStyle(
+                  color: AppTheme.textDark,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 17,
+                ),
+              ),
+              subtitle: Text(
+                patientPhone,
+                style: const TextStyle(
+                  color: AppTheme.textLight,
+                ),
+              ),
+              trailing: IconButton(
+                icon: const Icon(Icons.delete_outline),
+                color: Colors.red,
+                onPressed: () {
+                  confirmDelete(patientId, patientName);
+                },
+              ),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => PatientDetailView(
+                      patientId: patientId,
+                      patientName: patientName,
+                    ),
+                  ),
+                );
+              },
+            ),
           );
         },
       ),
