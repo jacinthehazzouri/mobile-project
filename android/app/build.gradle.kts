@@ -8,7 +8,7 @@ plugins {
 android {
     namespace = "com.example.smart_medbox"
     compileSdk = flutter.compileSdkVersion
-    ndkVersion = "26.3.11579264"
+    ndkVersion = flutter.ndkVersion
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
