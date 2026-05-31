@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../controllers/link_patient_controller.dart';
 import '../theme/app_theme.dart';
 
 class LinkPatientView extends StatefulWidget {
@@ -12,55 +12,40 @@ class LinkPatientView extends StatefulWidget {
 }
 
 class _LinkPatientViewState extends State<LinkPatientView> {
+  final LinkPatientController linkPatientController = LinkPatientController();
+
   final patientIdController = TextEditingController();
+
   bool loading = false;
 
+  void showToast(String message) {
+    Fluttertoast.showToast(
+      msg: message,
+      toastLength: Toast.LENGTH_SHORT,
+      gravity: ToastGravity.BOTTOM,
+    );
+  }
+
   Future<void> linkPatient() async {
+    if (patientIdController.text.trim().isEmpty) {
+      showToast('Please enter patient ID');
+      return;
+    }
+
     setState(() => loading = true);
 
     try {
-      final supabase = Supabase.instance.client;
-      final caregiver = supabase.auth.currentUser;
-
-      if (caregiver == null) {
-        throw Exception('No logged-in caregiver found');
-      }
-
-      final patientId = patientIdController.text.trim();
-
-      final patient = await supabase
-          .from('profiles')
-          .select()
-          .eq('id', patientId)
-          .eq('role', 'patient')
-          .maybeSingle();
-
-      if (patient == null) {
-        throw Exception('No patient found with this ID');
-      }
-
-      await supabase.from('caregiver_patients').insert({
-        'caregiver_id': caregiver.id,
-        'patient_id': patientId,
-      });
+      await linkPatientController.linkPatient(
+        patientIdController.text.trim(),
+      );
 
       if (!mounted) return;
 
-      Fluttertoast.showToast(
-        msg: 'Patient linked successfully',
-        toastLength: Toast.LENGTH_SHORT,
-        gravity: ToastGravity.BOTTOM,
-      );
-
-      Navigator.pop(context);
+      showToast('Patient linked successfully');
+      Navigator.pop(context, true);
     } catch (e) {
       if (!mounted) return;
-
-      Fluttertoast.showToast(
-        msg: 'Failed to link patient',
-        toastLength: Toast.LENGTH_SHORT,
-        gravity: ToastGravity.BOTTOM,
-      );
+      showToast('Failed to link patient');
     }
 
     if (mounted) {
@@ -99,9 +84,7 @@ class _LinkPatientViewState extends State<LinkPatientView> {
                   size: 42,
                 ),
               ),
-
               const SizedBox(height: 24),
-
               const Text(
                 'Link Patient by ID',
                 style: TextStyle(
@@ -110,9 +93,7 @@ class _LinkPatientViewState extends State<LinkPatientView> {
                   color: AppTheme.textDark,
                 ),
               ),
-
               const SizedBox(height: 8),
-
               const Text(
                 'Enter the patient ID to connect them to your caregiver account.',
                 textAlign: TextAlign.center,
@@ -122,9 +103,7 @@ class _LinkPatientViewState extends State<LinkPatientView> {
                   height: 1.5,
                 ),
               ),
-
               const SizedBox(height: 30),
-
               TextField(
                 controller: patientIdController,
                 decoration: const InputDecoration(
@@ -132,9 +111,7 @@ class _LinkPatientViewState extends State<LinkPatientView> {
                   prefixIcon: Icon(Icons.badge_outlined),
                 ),
               ),
-
               const SizedBox(height: 28),
-
               SizedBox(
                 width: double.infinity,
                 height: 54,
