@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../controllers/auth_controller.dart';
 import '../theme/app_theme.dart';
 
 class RegisterView extends StatefulWidget {
@@ -12,6 +12,8 @@ class RegisterView extends StatefulWidget {
 }
 
 class _RegisterViewState extends State<RegisterView> {
+  final AuthController authController = AuthController();
+
   final nameController = TextEditingController();
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
@@ -24,21 +26,13 @@ class _RegisterViewState extends State<RegisterView> {
     setState(() => loading = true);
 
     try {
-      final supabase = Supabase.instance.client;
-
-      final response = await supabase.auth.signUp(
+      await authController.register(
+        name: nameController.text.trim(),
         email: emailController.text.trim(),
         password: passwordController.text.trim(),
-        data: {
-          'name': nameController.text.trim(),
-          'role': role,
-          'phone': phoneController.text.trim(),
-        },
+        phone: phoneController.text.trim(),
+        role: role,
       );
-
-      if (response.user == null) {
-        throw Exception('User registration failed');
-      }
 
       if (!mounted) return;
 
@@ -108,9 +102,7 @@ class _RegisterViewState extends State<RegisterView> {
                   size: 42,
                 ),
               ),
-
               const SizedBox(height: 22),
-
               const Text(
                 'Create your account',
                 style: TextStyle(
@@ -119,9 +111,7 @@ class _RegisterViewState extends State<RegisterView> {
                   color: AppTheme.textDark,
                 ),
               ),
-
               const SizedBox(height: 8),
-
               const Text(
                 'Join Smart MedBox and start managing your medicine reminders.',
                 textAlign: TextAlign.center,
@@ -131,9 +121,7 @@ class _RegisterViewState extends State<RegisterView> {
                   height: 1.5,
                 ),
               ),
-
               const SizedBox(height: 30),
-
               TextField(
                 controller: nameController,
                 decoration: const InputDecoration(
@@ -141,9 +129,7 @@ class _RegisterViewState extends State<RegisterView> {
                   prefixIcon: Icon(Icons.person_outline),
                 ),
               ),
-
               const SizedBox(height: 15),
-
               TextField(
                 controller: emailController,
                 keyboardType: TextInputType.emailAddress,
@@ -153,9 +139,7 @@ class _RegisterViewState extends State<RegisterView> {
                   prefixIcon: Icon(Icons.email_outlined),
                 ),
               ),
-
               const SizedBox(height: 15),
-
               TextField(
                 controller: passwordController,
                 obscureText: true,
@@ -164,9 +148,7 @@ class _RegisterViewState extends State<RegisterView> {
                   prefixIcon: Icon(Icons.lock_outline),
                 ),
               ),
-
               const SizedBox(height: 15),
-
               TextField(
                 controller: phoneController,
                 keyboardType: TextInputType.phone,
@@ -175,9 +157,7 @@ class _RegisterViewState extends State<RegisterView> {
                   prefixIcon: Icon(Icons.phone_outlined),
                 ),
               ),
-
               const SizedBox(height: 15),
-
               DropdownButtonFormField<String>(
                 value: role,
                 isExpanded: true,
@@ -201,9 +181,7 @@ class _RegisterViewState extends State<RegisterView> {
                   });
                 },
               ),
-
               const SizedBox(height: 28),
-
               SizedBox(
                 width: double.infinity,
                 height: 54,

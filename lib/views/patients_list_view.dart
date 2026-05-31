@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../controllers/patients_list_controller.dart';
+import '../models/patient_list_model.dart';
 import '../theme/app_theme.dart';
 import 'patient_detail_view.dart';
 
@@ -13,8 +14,11 @@ class PatientsListView extends StatefulWidget {
 }
 
 class _PatientsListViewState extends State<PatientsListView> {
+  final PatientsListController patientsListController =
+  PatientsListController();
+
   bool isLoading = true;
-  List<Map<String, dynamic>> patients = [];
+  List<PatientListModel> patients = [];
 
   @override
   void initState() {
@@ -22,86 +26,73 @@ class _PatientsListViewState extends State<PatientsListView> {
     loadPatients();
   }
 
+  void showToast(String message) {
+    Fluttertoast.showToast(
+      msg: message,
+      toastLength: Toast.LENGTH_SHORT,
+      gravity: ToastGravity.BOTTOM,
+    );
+  }
+
   Future<void> loadPatients() async {
     try {
-      final caregiverId = Supabase.instance.client.auth.currentUser!.id;
+      final result = await patientsListController.getPatients();
 
-      final response = await Supabase.instance.client
-          .from('caregiver_patients')
-          .select('patient_id, profiles!caregiver_patients_patient_id_fkey(id, name, phone)')
-          .eq('caregiver_id', caregiverId);
+      if (!mounted) return;
 
       setState(() {
-        patients = List<Map<String, dynamic>>.from(response);
+        patients = result;
         isLoading = false;
       });
     } catch (e) {
-      setState(() {
-        isLoading = false;
-      });
+      if (!mounted) return;
 
-      Fluttertoast.showToast(
-        msg: 'Failed to load patients',
-        toastLength: Toast.LENGTH_SHORT,
-        gravity: ToastGravity.BOTTOM,
-      );
+      setState(() => isLoading = false);
+      showToast('Failed to load patients');
     }
   }
 
   Future<void> deletePatientLink(String patientId) async {
     try {
-      final caregiverId = Supabase.instance.client.auth.currentUser!.id;
-
-      await Supabase.instance.client
-          .from('caregiver_patients')
-          .delete()
-          .eq('caregiver_id', caregiverId)
-          .eq('patient_id', patientId);
-
+      await patientsListController.removePatient(patientId);
       await loadPatients();
 
-      Fluttertoast.showToast(
-        msg: 'Patient removed successfully',
-        toastLength: Toast.LENGTH_SHORT,
-        gravity: ToastGravity.BOTTOM,
-      );
+      showToast('Patient removed successfully');
     } catch (e) {
-      Fluttertoast.showToast(
-        msg: 'Failed to remove patient',
-        toastLength: Toast.LENGTH_SHORT,
-        gravity: ToastGravity.BOTTOM,
-      );
+      showToast('Failed to remove patient');
     }
   }
 
   Future<void> confirmDelete(String patientId, String patientName) async {
     final shouldDelete = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
-        title: const Text(
-          'Remove Patient',
-          textAlign: TextAlign.center,
-        ),
-        content: Text(
-          'Are you sure you want to remove $patientName from your patient list?',
-          textAlign: TextAlign.center,
-        ),
-        actionsAlignment: MainAxisAlignment.center,
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+      builder: (_) {
+        return AlertDialog(
+          title: const Text(
+            'Remove Patient',
+            textAlign: TextAlign.center,
           ),
-          SizedBox(
-            width: 110,
-            height: 44,
-            child: ElevatedButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('Remove'),
+          content: Text(
+            'Are you sure you want to remove $patientName from your patient list?',
+            textAlign: TextAlign.center,
+          ),
+          actionsAlignment: MainAxisAlignment.center,
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel'),
             ),
-          ),
-        ],
-      ),
+            SizedBox(
+              width: 110,
+              height: 44,
+              child: ElevatedButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Remove'),
+              ),
+            ),
+          ],
+        );
+      },
     );
 
     if (shouldDelete == true) {
@@ -132,12 +123,14 @@ class _PatientsListViewState extends State<PatientsListView> {
         padding: const EdgeInsets.all(24),
         itemCount: patients.length,
         itemBuilder: (context, index) {
-          final patient =
-          patients[index]['profiles'] as Map<String, dynamic>;
+          final patient = patients[index];
 
-          final patientId = patient['id'];
-          final patientName = patient['name'] ?? 'Unknown Patient';
-          final patientPhone = patient['phone'] ?? 'No phone number';
+          final patientId = patient.id;
+          final patientName = patient.name.isEmpty
+              ? 'Unknown Patient'
+              : patient.name;
+          final patientPhone =
+              patient.phone ?? 'No phone number';
 
           return Container(
             margin: const EdgeInsets.only(bottom: 16),

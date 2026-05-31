@@ -1,12 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
-
-import '../theme/app_theme.dart';
-import 'login_view.dart';
-import 'manage_profile_view.dart';
 import 'package:flutter/services.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import '../controllers/auth_controller.dart';
+import '../controllers/patient_dashboard_controller.dart';
+import '../models/dose_model.dart';
+import '../models/profile_model.dart';
+import '../theme/app_theme.dart';
+
+import 'login_view.dart';
+import 'manage_profile_view.dart';
+import 'patient_detail_view.dart';
 
 class PatientDashboardView extends StatefulWidget {
   const PatientDashboardView({super.key});
@@ -16,6 +21,11 @@ class PatientDashboardView extends StatefulWidget {
 }
 
 class _PatientDashboardViewState extends State<PatientDashboardView> {
+  final PatientDashboardController patientDashboardController =
+  PatientDashboardController();
+
+  final AuthController authController = AuthController();
+
   String selectedDay = 'Mon';
 
   final List<String> weekDays = [
@@ -31,132 +41,81 @@ class _PatientDashboardViewState extends State<PatientDashboardView> {
   Future<void> logout(BuildContext context) async {
     final shouldLogout = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
-        title: const Center(
-          child: Text(
-            'Logout',
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
+      builder: (_) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          title: const Center(
+            child: Text(
+              'Logout',
+              style: TextStyle(fontWeight: FontWeight.bold),
             ),
           ),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(
-              Icons.logout,
-              color: AppTheme.primary,
-              size: 60,
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'Are you sure you want to logout?',
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context, false),
-                  child: const Text('Cancel'),
-                ),
-                const SizedBox(width: 12),
-                SizedBox(
-                  width: 110,
-                  height: 45,
-                  child: ElevatedButton(
-                    onPressed: () => Navigator.pop(context, true),
-                    child: const Text('Logout'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.logout, color: AppTheme.primary, size: 60),
+              const SizedBox(height: 16),
+              const Text(
+                'Are you sure you want to logout?',
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, false),
+                    child: const Text('Cancel'),
                   ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
+                  const SizedBox(width: 12),
+                  SizedBox(
+                    width: 110,
+                    height: 45,
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.pop(context, true),
+                      child: const Text('Logout'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
     );
 
     if (shouldLogout == true) {
       final prefs = await SharedPreferences.getInstance();
       await prefs.clear();
 
-      await Supabase.instance.client.auth.signOut();
+      await authController.logout();
 
       if (!context.mounted) return;
 
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(
-          builder: (_) => const LoginView(),
-        ),
+        MaterialPageRoute(builder: (_) => const LoginView()),
             (route) => false,
       );
     }
   }
 
-  Future<Map<String, dynamic>> getProfile() async {
-    final userId = Supabase.instance.client.auth.currentUser!.id;
-
-    return await Supabase.instance.client
-        .from('profiles')
-        .select('name')
-        .eq('id', userId)
-        .single();
-  }
-
-  Future<List<Map<String, dynamic>>> getPatientDoses() async {
-    final userId = Supabase.instance.client.auth.currentUser!.id;
-
-    final response = await Supabase.instance.client
-        .from('doses')
-        .select()
-        .eq('patient_id', userId)
-        .eq('active', true)
-        .order('scheduled_time', ascending: true);
-
-    return List<Map<String, dynamic>>.from(response);
-  }
-
-  List<Map<String, dynamic>> filterDosesByDay(
-      List<Map<String, dynamic>> doses,
-      ) {
-    final filteredDoses = doses.where((dose) {
-      final days = dose['days']?.toString() ?? '';
-      return days.contains(selectedDay);
-    }).toList();
-
-    filteredDoses.sort((a, b) {
-      return a['scheduled_time']
-          .toString()
-          .compareTo(b['scheduled_time'].toString());
-    });
-
-    return filteredDoses;
-  }
-
-  Future<Map<String, dynamic>?> getNextDose() async {
-    final doses = await getPatientDoses();
-    final filteredDoses = filterDosesByDay(doses);
-
-    if (filteredDoses.isEmpty) return null;
-
-    return filteredDoses.first;
-  }
-
-  String formatTime(dynamic value) {
-    if (value == null) return 'N/A';
-
-    final time = value.toString();
-
-    if (time.length >= 5) {
-      return time.substring(0, 5);
+  String formatTime(String value) {
+    if (value.length >= 5) {
+      return value.substring(0, 5);
     }
 
-    return time;
+    return value;
+  }
+
+  void showToast(String message) {
+    Fluttertoast.showToast(
+      msg: message,
+      toastLength: Toast.LENGTH_SHORT,
+      gravity: ToastGravity.BOTTOM,
+    );
   }
 
   Drawer profileDrawer(BuildContext context) {
@@ -252,8 +211,8 @@ class _PatientDashboardViewState extends State<PatientDashboardView> {
   }
 
   Widget nextDoseCard() {
-    return FutureBuilder<Map<String, dynamic>?>(
-      future: getNextDose(),
+    return FutureBuilder<DoseModel?>(
+      future: patientDashboardController.getNextDose(selectedDay),
       builder: (context, snapshot) {
         final dose = snapshot.data;
 
@@ -294,7 +253,7 @@ class _PatientDashboardViewState extends State<PatientDashboardView> {
                 )
               else
                 Text(
-                  '${dose['label'] ?? 'Medicine'} • ${dose['dosage'] ?? 'No dosage'} • ${formatTime(dose['scheduled_time'])}',
+                  '${dose.label} • ${dose.dosage ?? 'No dosage'} • ${formatTime(dose.scheduledTime)}',
                   style: const TextStyle(color: Colors.white70, fontSize: 15),
                 ),
             ],
@@ -304,9 +263,54 @@ class _PatientDashboardViewState extends State<PatientDashboardView> {
     );
   }
 
+  Widget manageMedicinesButton(String patientId, String patientName) {
+    return SizedBox(
+      width: double.infinity,
+      height: 54,
+      child: ElevatedButton.icon(
+        icon: const Icon(Icons.medical_services_outlined),
+        label: const Text('Manage My Medicines & Medical Info'),
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) {
+                return PatientDetailView(
+                  patientId: patientId,
+                  patientName: patientName,
+                );
+              },
+            ),
+          ).then((_) {
+            setState(() {});
+          });
+        },
+      ),
+    );
+  }
+
+  Widget manageMedicinesButtonSection(String patientId, String patientName) {
+    return FutureBuilder<bool>(
+      future: patientDashboardController.isLinkedToCaregiver(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const SizedBox.shrink();
+        }
+
+        final linkedToCaregiver = snapshot.data ?? false;
+
+        if (linkedToCaregiver) {
+          return const SizedBox.shrink();
+        }
+
+        return manageMedicinesButton(patientId, patientName);
+      },
+    );
+  }
+
   Widget medicationsList() {
-    return FutureBuilder<List<Map<String, dynamic>>>(
-      future: getPatientDoses(),
+    return FutureBuilder<List<DoseModel>>(
+      future: patientDashboardController.getPatientDoses(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(
@@ -318,30 +322,30 @@ class _PatientDashboardViewState extends State<PatientDashboardView> {
         }
 
         if (snapshot.hasError) {
-          return Text(
-            'Error loading medications: ${snapshot.error}',
-            style: const TextStyle(color: Colors.red),
+          return const Text(
+            'Error loading medications.',
+            style: TextStyle(color: Colors.red),
           );
         }
 
         final allDoses = snapshot.data ?? [];
-        final doses = filterDosesByDay(allDoses);
+        final doses = patientDashboardController.filterDosesByDay(
+          allDoses,
+          selectedDay,
+        );
 
         if (doses.isEmpty) {
           return Text(
             'No medications scheduled for $selectedDay.',
-            style: const TextStyle(color: AppTheme.textLight, fontSize: 15),
+            style: const TextStyle(
+              color: AppTheme.textLight,
+              fontSize: 15,
+            ),
           );
         }
 
         return Column(
           children: doses.map((dose) {
-            final label = dose['label'] ?? 'Unnamed medicine';
-            final dosage = dose['dosage'] ?? 'No dosage';
-            final scheduledTime = formatTime(dose['scheduled_time']);
-            final days = dose['days'] ?? 'No days';
-            final instructions = dose['instructions'];
-
             return Container(
               width: double.infinity,
               margin: const EdgeInsets.only(bottom: 12),
@@ -362,7 +366,7 @@ class _PatientDashboardViewState extends State<PatientDashboardView> {
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
-                          label,
+                          dose.label,
                           style: const TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
@@ -371,7 +375,7 @@ class _PatientDashboardViewState extends State<PatientDashboardView> {
                         ),
                       ),
                       Text(
-                        scheduledTime,
+                        formatTime(dose.scheduledTime),
                         style: const TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.bold,
@@ -382,19 +386,19 @@ class _PatientDashboardViewState extends State<PatientDashboardView> {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    'Dosage: $dosage',
+                    'Dosage: ${dose.dosage ?? 'No dosage'}',
                     style: const TextStyle(color: AppTheme.textLight),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Days: $days',
+                    'Days: ${dose.days}',
                     style: const TextStyle(color: AppTheme.textLight),
                   ),
-                  if (instructions != null &&
-                      instructions.toString().trim().isNotEmpty) ...[
+                  if (dose.instructions != null &&
+                      dose.instructions!.trim().isNotEmpty) ...[
                     const SizedBox(height: 8),
                     Text(
-                      'Instructions: $instructions',
+                      'Instructions: ${dose.instructions}',
                       style: const TextStyle(color: AppTheme.textDark),
                     ),
                   ],
@@ -409,8 +413,7 @@ class _PatientDashboardViewState extends State<PatientDashboardView> {
 
   @override
   Widget build(BuildContext context) {
-    final patientId =
-        Supabase.instance.client.auth.currentUser?.id ?? 'Unknown';
+    final patientId = patientDashboardController.getCurrentPatientId();
 
     return Scaffold(
       backgroundColor: AppTheme.background,
@@ -432,93 +435,99 @@ class _PatientDashboardViewState extends State<PatientDashboardView> {
       endDrawer: profileDrawer(context),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            FutureBuilder<Map<String, dynamic>>(
-              future: getProfile(),
-              builder: (context, snapshot) {
-                final name = snapshot.hasData ? snapshot.data!['name'] : '';
+        child: FutureBuilder<ProfileModel>(
+          future: patientDashboardController.getProfile(),
+          builder: (context, profileSnapshot) {
+            final patientName = profileSnapshot.hasData
+                ? profileSnapshot.data!.name
+                : 'My Profile';
 
-                return Text(
-                  name == '' ? 'Hi 👋' : 'Hi $name 👋',
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  patientName.isEmpty ? 'Hi 👋' : 'Hi $patientName 👋',
                   style: const TextStyle(
                     fontSize: 30,
                     fontWeight: FontWeight.bold,
                     color: AppTheme.textDark,
                   ),
-                );
-              },
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Share your Patient ID with your caregiver.',
-              style: TextStyle(color: AppTheme.textLight, fontSize: 16),
-            ),
-            const SizedBox(height: 24),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: AppTheme.cardColor,
-                borderRadius: BorderRadius.circular(24),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Your Patient ID',
-                    style: TextStyle(color: AppTheme.textLight, fontSize: 14),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Share your Patient ID with your caregiver.',
+                  style: TextStyle(
+                    color: AppTheme.textLight,
+                    fontSize: 16,
                   ),
-                  const SizedBox(height: 8),
-                  Row(
+                ),
+                const SizedBox(height: 24),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: AppTheme.cardColor,
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: SelectableText(
-                          patientId,
-                          style: const TextStyle(
-                            color: AppTheme.textDark,
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                          ),
+                      const Text(
+                        'Your Patient ID',
+                        style: TextStyle(
+                          color: AppTheme.textLight,
+                          fontSize: 14,
                         ),
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.copy),
-                        tooltip: 'Copy ID',
-                        onPressed: () async {
-                          await Clipboard.setData(
-                            ClipboardData(text: patientId),
-                          );
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: SelectableText(
+                              patientId,
+                              style: const TextStyle(
+                                color: AppTheme.textDark,
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.copy),
+                            tooltip: 'Copy ID',
+                            onPressed: () async {
+                              await Clipboard.setData(
+                                ClipboardData(text: patientId),
+                              );
 
-                          Fluttertoast.showToast(
-                            msg: 'ID copied',
-                            toastLength: Toast.LENGTH_SHORT,
-                            gravity: ToastGravity.BOTTOM,
-                          );
-                        },
+                              showToast('ID copied');
+                            },
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-            dayFilterChips(),
-            const SizedBox(height: 24),
-            nextDoseCard(),
-            const SizedBox(height: 28),
-            Text(
-              '$selectedDay Medications',
-              style: const TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                color: AppTheme.textDark,
-              ),
-            ),
-            const SizedBox(height: 16),
-            medicationsList(),
-          ],
+                ),
+                const SizedBox(height: 18),
+                manageMedicinesButtonSection(patientId, patientName),
+                const SizedBox(height: 24),
+                dayFilterChips(),
+                const SizedBox(height: 24),
+                nextDoseCard(),
+                const SizedBox(height: 28),
+                Text(
+                  '$selectedDay Medications',
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.textDark,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                medicationsList(),
+              ],
+            );
+          },
         ),
       ),
     );

@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../controllers/auth_controller.dart';
+import '../controllers/caregiver_dashboard_controller.dart';
+import '../models/profile_model.dart';
 import '../theme/app_theme.dart';
+
 import 'link_patient_view.dart';
 import 'login_view.dart';
 import 'manage_profile_view.dart';
 import 'patients_list_view.dart';
-import 'package:flutter/services.dart';
-import 'package:fluttertoast/fluttertoast.dart';
 
 class CaregiverDashboardView extends StatefulWidget {
   const CaregiverDashboardView({super.key});
@@ -18,50 +21,57 @@ class CaregiverDashboardView extends StatefulWidget {
 }
 
 class _CaregiverDashboardViewState extends State<CaregiverDashboardView> {
+  final CaregiverDashboardController caregiverDashboardController =
+  CaregiverDashboardController();
+
+  final AuthController authController = AuthController();
+
   Future<void> logout(BuildContext context) async {
     final shouldLogout = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
-        title: const Text(
-          'Logout',
-          textAlign: TextAlign.center,
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text(
-              'Are you sure you want to logout?',
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context, false),
-                  child: const Text('Cancel'),
-                ),
-                const SizedBox(width: 12),
-                SizedBox(
-                  width: 100,
-                  height: 44,
-                  child: ElevatedButton(
-                    onPressed: () => Navigator.pop(context, true),
-                    child: const Text('Logout'),
+      builder: (_) {
+        return AlertDialog(
+          title: const Text(
+            'Logout',
+            textAlign: TextAlign.center,
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Are you sure you want to logout?',
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, false),
+                    child: const Text('Cancel'),
                   ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
+                  const SizedBox(width: 12),
+                  SizedBox(
+                    width: 100,
+                    height: 44,
+                    child: ElevatedButton(
+                      onPressed: () => Navigator.pop(context, true),
+                      child: const Text('Logout'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
     );
 
     if (shouldLogout == true) {
       final prefs = await SharedPreferences.getInstance();
       await prefs.clear();
 
-      await Supabase.instance.client.auth.signOut();
+      await authController.logout();
 
       if (!context.mounted) return;
 
@@ -73,14 +83,12 @@ class _CaregiverDashboardViewState extends State<CaregiverDashboardView> {
     }
   }
 
-  Future<Map<String, dynamic>> getProfile() async {
-    final userId = Supabase.instance.client.auth.currentUser!.id;
-
-    return await Supabase.instance.client
-        .from('profiles')
-        .select('name')
-        .eq('id', userId)
-        .single();
+  void showToast(String message) {
+    Fluttertoast.showToast(
+      msg: message,
+      toastLength: Toast.LENGTH_SHORT,
+      gravity: ToastGravity.BOTTOM,
+    );
   }
 
   Drawer profileDrawer(BuildContext context) {
@@ -199,8 +207,7 @@ class _CaregiverDashboardViewState extends State<CaregiverDashboardView> {
 
   @override
   Widget build(BuildContext context) {
-    final caregiverId =
-        Supabase.instance.client.auth.currentUser?.id ?? 'Unknown';
+    final caregiverId = caregiverDashboardController.getCurrentCaregiverId();
 
     return Scaffold(
       backgroundColor: AppTheme.background,
@@ -225,13 +232,13 @@ class _CaregiverDashboardViewState extends State<CaregiverDashboardView> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            FutureBuilder<Map<String, dynamic>>(
-              future: getProfile(),
+            FutureBuilder<ProfileModel>(
+              future: caregiverDashboardController.getProfile(),
               builder: (context, snapshot) {
-                final name = snapshot.hasData ? snapshot.data!['name'] : '';
+                final name = snapshot.hasData ? snapshot.data!.name : '';
 
                 return Text(
-                  name == '' ? 'Hi 👋' : 'Hi $name 👋',
+                  name.isEmpty ? 'Hi 👋' : 'Hi $name 👋',
                   style: const TextStyle(
                     fontSize: 30,
                     fontWeight: FontWeight.bold,
@@ -258,7 +265,10 @@ class _CaregiverDashboardViewState extends State<CaregiverDashboardView> {
                 children: [
                   const Text(
                     'Your Caregiver ID',
-                    style: TextStyle(color: AppTheme.textLight, fontSize: 14),
+                    style: TextStyle(
+                      color: AppTheme.textLight,
+                      fontSize: 14,
+                    ),
                   ),
                   const SizedBox(height: 8),
                   Row(
@@ -281,11 +291,7 @@ class _CaregiverDashboardViewState extends State<CaregiverDashboardView> {
                             ClipboardData(text: caregiverId),
                           );
 
-                          Fluttertoast.showToast(
-                            msg: 'ID copied',
-                            toastLength: Toast.LENGTH_SHORT,
-                            gravity: ToastGravity.BOTTOM,
-                          );
+                          showToast('ID copied');
                         },
                       ),
                     ],

@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../controllers/profile_controller.dart';
+import '../models/profile_model.dart';
 import '../theme/app_theme.dart';
 
 class ManageProfileView extends StatefulWidget {
@@ -12,6 +13,8 @@ class ManageProfileView extends StatefulWidget {
 }
 
 class _ManageProfileViewState extends State<ManageProfileView> {
+  final ProfileController profileController = ProfileController();
+
   final nameController = TextEditingController();
   final phoneController = TextEditingController();
 
@@ -36,17 +39,11 @@ class _ManageProfileViewState extends State<ManageProfileView> {
 
   Future<void> loadProfile() async {
     try {
-      final userId = Supabase.instance.client.auth.currentUser!.id;
+      final ProfileModel profile = await profileController.getProfile();
 
-      final data = await Supabase.instance.client
-          .from('profiles')
-          .select('name, phone, role')
-          .eq('id', userId)
-          .single();
-
-      nameController.text = data['name'] ?? '';
-      phoneController.text = data['phone'] ?? '';
-      role = data['role'] ?? '';
+      nameController.text = profile.name;
+      phoneController.text = profile.phone ?? '';
+      role = profile.role;
     } catch (e) {
       if (!mounted) return;
       showToast('Failed to load profile');
@@ -61,17 +58,14 @@ class _ManageProfileViewState extends State<ManageProfileView> {
     setState(() => saving = true);
 
     try {
-      final userId = Supabase.instance.client.auth.currentUser!.id;
-
-      await Supabase.instance.client.from('profiles').update({
-        'name': nameController.text.trim(),
-        'phone': phoneController.text.trim(),
-      }).eq('id', userId);
+      await profileController.updateProfile(
+        name: nameController.text.trim(),
+        phone: phoneController.text.trim(),
+      );
 
       if (!mounted) return;
 
       showToast('Profile updated successfully');
-
       Navigator.pop(context, true);
     } catch (e) {
       if (!mounted) return;
