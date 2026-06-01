@@ -4,6 +4,7 @@ import 'package:fluttertoast/fluttertoast.dart';
 import '../controllers/profile_controller.dart';
 import '../models/profile_model.dart';
 import '../theme/app_theme.dart';
+import 'change_password_view.dart';
 
 class ManageProfileView extends StatefulWidget {
   const ManageProfileView({super.key});
@@ -77,6 +78,15 @@ class _ManageProfileViewState extends State<ManageProfileView> {
     }
   }
 
+  void openChangePasswordPage() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const ChangePasswordView(),
+      ),
+    );
+  }
+
   @override
   void dispose() {
     nameController.dispose();
@@ -111,7 +121,9 @@ class _ManageProfileViewState extends State<ManageProfileView> {
                   size: 42,
                 ),
               ),
+
               const SizedBox(height: 24),
+
               const Text(
                 'Update Profile Info',
                 style: TextStyle(
@@ -120,7 +132,9 @@ class _ManageProfileViewState extends State<ManageProfileView> {
                   color: AppTheme.textDark,
                 ),
               ),
+
               const SizedBox(height: 8),
+
               Text(
                 'Role: $role',
                 style: const TextStyle(
@@ -128,7 +142,9 @@ class _ManageProfileViewState extends State<ManageProfileView> {
                   fontSize: 15,
                 ),
               ),
+
               const SizedBox(height: 30),
+
               TextField(
                 controller: nameController,
                 decoration: const InputDecoration(
@@ -136,7 +152,9 @@ class _ManageProfileViewState extends State<ManageProfileView> {
                   prefixIcon: Icon(Icons.person_outline),
                 ),
               ),
+
               const SizedBox(height: 15),
+
               TextField(
                 controller: phoneController,
                 keyboardType: TextInputType.phone,
@@ -145,7 +163,9 @@ class _ManageProfileViewState extends State<ManageProfileView> {
                   prefixIcon: Icon(Icons.phone_outlined),
                 ),
               ),
+
               const SizedBox(height: 28),
+
               SizedBox(
                 width: double.infinity,
                 height: 54,
@@ -161,6 +181,18 @@ class _ManageProfileViewState extends State<ManageProfileView> {
                     ),
                   )
                       : const Text('Save Changes'),
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              SizedBox(
+                width: double.infinity,
+                height: 54,
+                child: OutlinedButton.icon(
+                  onPressed: openChangePasswordPage,
+                  icon: const Icon(Icons.lock_reset_outlined),
+                  label: const Text('Change Password'),
                 ),
               ),
             ],
