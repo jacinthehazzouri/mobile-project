@@ -48,7 +48,86 @@ class AuthController {
     }
   }
 
+  Future<void> changePassword({
+    required String oldPassword,
+    required String newPassword,
+    required String confirmPassword,
+  }) async {
+    final user = _supabase.auth.currentUser;
+
+    if (user == null || user.email == null) {
+      throw Exception('User not logged in');
+    }
+
+    if (oldPassword.isEmpty ||
+        newPassword.isEmpty ||
+        confirmPassword.isEmpty) {
+      throw Exception('Please fill all password fields');
+    }
+
+    if (newPassword.length < 6) {
+      throw Exception('New password must be at least 6 characters');
+    }
+
+    if (newPassword != confirmPassword) {
+      throw Exception('Passwords do not match');
+    }
+
+    await _supabase.auth.signInWithPassword(
+      email: user.email!,
+      password: oldPassword,
+    );
+
+    await _supabase.auth.updateUser(
+      UserAttributes(password: newPassword),
+    );
+  }
+
   Future<void> logout() async {
     await _supabase.auth.signOut();
+  }
+
+  Future<void> sendPasswordResetEmail(String email) async {
+    if (email.trim().isEmpty) {
+      throw Exception('Please enter your email');
+    }
+
+    if (!RegExp(r'^[^@]+@[^@]+\.com$').hasMatch(email.trim())) {
+      throw Exception('Enter a valid email');
+    }
+
+    await _supabase.auth.resetPasswordForEmail(
+      email.trim(),
+      redirectTo: 'io.supabase.smartmedbox://reset-password',
+    );
+  }
+
+  Future<void> updatePasswordAfterReset({
+    required String newPassword,
+    required String confirmPassword,
+  }) async {
+    if (newPassword.isEmpty || confirmPassword.isEmpty) {
+      throw Exception('Please fill all password fields');
+    }
+
+    if (newPassword.length < 6) {
+      throw Exception('Password must be at least 6 characters');
+    }
+
+    if (!RegExp(r'[A-Z]').hasMatch(newPassword)) {
+      throw Exception('Password must contain at least one capital letter');
+    }
+
+    if (!RegExp(r'[0-9]').hasMatch(newPassword)) {
+      throw Exception('Password must contain at least one number');
+    }
+
+    if (newPassword != confirmPassword) {
+      throw Exception('Passwords do not match');
+    }
+
+    await _supabase.auth.updateUser(
+      UserAttributes(password: newPassword),
+    );
   }
 }

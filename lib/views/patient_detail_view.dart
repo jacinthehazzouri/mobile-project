@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 
 import '../controllers/patient_controller.dart';
@@ -6,6 +7,7 @@ import '../models/dose_event_model.dart';
 import '../models/dose_model.dart';
 import '../models/medical_info_model.dart';
 import '../theme/app_theme.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class PatientDetailView extends StatefulWidget {
   final String patientId;
@@ -34,6 +36,17 @@ class _PatientDetailViewState extends State<PatientDetailView>
   bool dosesLoading = true;
   bool medicalLoading = true;
   bool historyLoading = true;
+
+  final List<String> bloodTypes = const [
+    'A+',
+    'A-',
+    'B+',
+    'B-',
+    'AB+',
+    'AB-',
+    'O+',
+    'O-',
+  ];
 
   @override
   void initState() {
@@ -67,7 +80,22 @@ class _PatientDetailViewState extends State<PatientDetailView>
       msg: message,
       toastLength: Toast.LENGTH_SHORT,
       gravity: ToastGravity.BOTTOM,
+      fontSize: 16,
     );
+  }
+
+  bool isValidLebanesePhone(String phone) {
+    return RegExp(r'^(03|70|71|76|78|79|81)\d{6}$').hasMatch(phone);
+  }
+
+  Future<void> callEmergencyContact(String phone) async {
+    final Uri uri = Uri(scheme: 'tel', path: phone.trim());
+
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri);
+    } else {
+      showToast('Could not open phone dialer');
+    }
   }
 
   Future<void> loadDoses() async {
@@ -480,9 +508,6 @@ class _PatientDetailViewState extends State<PatientDetailView>
     final ageController = TextEditingController(
       text: medicalInfo?.age?.toString() ?? '',
     );
-    final bloodController = TextEditingController(
-      text: medicalInfo?.bloodType ?? '',
-    );
     final allergiesController = TextEditingController(
       text: medicalInfo?.allergies ?? '',
     );
@@ -499,148 +524,198 @@ class _PatientDetailViewState extends State<PatientDetailView>
       text: medicalInfo?.notes ?? '',
     );
 
+    String? selectedBloodType =
+    medicalInfo?.bloodType == null || medicalInfo!.bloodType!.isEmpty
+        ? null
+        : medicalInfo!.bloodType;
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (bottomSheetContext) {
-        return Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(
-              top: Radius.circular(28),
-            ),
-          ),
-          padding: EdgeInsets.only(
-            left: 24,
-            right: 24,
-            top: 24,
-            bottom: MediaQuery.of(bottomSheetContext).viewInsets.bottom + 24,
-          ),
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
+        return StatefulBuilder(
+          builder: (context, setBottomSheetState) {
+            return Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(
+                  top: Radius.circular(28),
+                ),
+              ),
+              padding: EdgeInsets.only(
+                left: 24,
+                right: 24,
+                top: 24,
+                bottom:
+                MediaQuery.of(bottomSheetContext).viewInsets.bottom + 24,
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
+                    Row(
+                      children: [
+                        const Text(
+                          'Medical Info',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.textDark,
+                          ),
+                        ),
+                        const Spacer(),
+                        IconButton(
+                          icon: const Icon(Icons.close),
+                          onPressed: () => Navigator.pop(bottomSheetContext),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
                     const Text(
-                      'Medical Info',
+                      'This information is used for the patient medical profile.',
                       style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: AppTheme.textDark,
+                        color: AppTheme.textLight,
+                        fontSize: 13,
                       ),
                     ),
-                    const Spacer(),
-                    IconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: () => Navigator.pop(bottomSheetContext),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                const Text(
-                  'This information is used for the patient medical profile.',
-                  style: TextStyle(
-                    color: AppTheme.textLight,
-                    fontSize: 13,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: ageController,
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(
-                          labelText: 'Age',
-                          prefixIcon: Icon(Icons.cake_outlined),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: ageController,
+                            keyboardType: TextInputType.number,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                            ],
+                            decoration: const InputDecoration(
+                              labelText: 'Age',
+                              prefixIcon: Icon(Icons.cake_outlined),
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: TextField(
-                        controller: bloodController,
-                        decoration: const InputDecoration(
-                          labelText: 'Blood type',
-                          hintText: 'e.g. A+',
-                          prefixIcon: Icon(Icons.bloodtype_outlined),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: DropdownButtonFormField<String>(
+                            value: selectedBloodType,
+                            isExpanded: true,
+                            dropdownColor: Colors.white,
+                            icon: const Icon(
+                              Icons.keyboard_arrow_down_rounded,
+                              color: AppTheme.primary,
+                            ),
+                            decoration: const InputDecoration(
+                              labelText: 'Blood Type',
+                              prefixIcon: Icon(Icons.bloodtype_outlined),
+                            ),
+                            style: const TextStyle(
+                              color: AppTheme.textDark,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w500,
+                            ),
+                            items: bloodTypes.map((type) {
+                              return DropdownMenuItem<String>(
+                                value: type,
+                                child: Text(type),
+                              );
+                            }).toList(),
+                            onChanged: (value) {
+                              setBottomSheetState(() {
+                                selectedBloodType = value;
+                              });
+                            },
+                          ),
                         ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: allergiesController,
+                      decoration: const InputDecoration(
+                        labelText: 'Allergies',
+                        hintText: 'Comma separated',
+                        prefixIcon: Icon(Icons.warning_amber_outlined),
                       ),
                     ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: allergiesController,
-                  decoration: const InputDecoration(
-                    labelText: 'Allergies',
-                    hintText: 'Comma separated',
-                    prefixIcon: Icon(Icons.warning_amber_outlined),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: conditionsController,
-                  decoration: const InputDecoration(
-                    labelText: 'Medical conditions',
-                    hintText: 'Comma separated',
-                    prefixIcon: Icon(Icons.medical_information_outlined),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: emergencyNameController,
-                  decoration: const InputDecoration(
-                    labelText: 'Emergency contact name',
-                    prefixIcon: Icon(Icons.person_outline),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: emergencyPhoneController,
-                  keyboardType: TextInputType.phone,
-                  decoration: const InputDecoration(
-                    labelText: 'Emergency contact phone',
-                    prefixIcon: Icon(Icons.phone_outlined),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: notesController,
-                  maxLines: 3,
-                  decoration: const InputDecoration(
-                    labelText: 'Notes',
-                    prefixIcon: Icon(Icons.notes_outlined),
-                  ),
-                ),
-                const SizedBox(height: 22),
-                SizedBox(
-                  width: double.infinity,
-                  height: 52,
-                  child: ElevatedButton(
-                    onPressed: () async {
-                      Navigator.pop(bottomSheetContext);
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: conditionsController,
+                      decoration: const InputDecoration(
+                        labelText: 'Medical conditions',
+                        hintText: 'Comma separated',
+                        prefixIcon: Icon(Icons.medical_information_outlined),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: emergencyNameController,
+                      decoration: const InputDecoration(
+                        labelText: 'Emergency contact name',
+                        prefixIcon: Icon(Icons.person_outline),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: emergencyPhoneController,
+                      keyboardType: TextInputType.number,
+                      maxLength: 8,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.digitsOnly,
+                      ],
+                      decoration: const InputDecoration(
+                        labelText: 'Emergency contact phone',
+                        helperText: 'Example: 03123456 or 70123456',
+                        prefixIcon: Icon(Icons.phone_outlined),
+                        counterText: '',
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: notesController,
+                      maxLines: 3,
+                      decoration: const InputDecoration(
+                        labelText: 'Notes',
+                        prefixIcon: Icon(Icons.notes_outlined),
+                      ),
+                    ),
+                    const SizedBox(height: 22),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 52,
+                      child: ElevatedButton(
+                        onPressed: () async {
+                          final emergencyPhone =
+                          emergencyPhoneController.text.trim();
 
-                      await saveMedicalInfo(
-                        age: int.tryParse(ageController.text.trim()),
-                        bloodType: bloodController.text.trim(),
-                        allergies: allergiesController.text.trim(),
-                        conditions: conditionsController.text.trim(),
-                        emergencyName: emergencyNameController.text.trim(),
-                        emergencyPhone: emergencyPhoneController.text.trim(),
-                        notes: notesController.text.trim(),
-                      );
-                    },
-                    child: const Text('Save Medical Info'),
-                  ),
+                          if (emergencyPhone.isNotEmpty &&
+                              !isValidLebanesePhone(emergencyPhone)) {
+                            showToast('Enter a valid Lebanese phone number');
+                            return;
+                          }
+
+                          Navigator.pop(bottomSheetContext);
+
+                          await saveMedicalInfo(
+                            age: int.tryParse(ageController.text.trim()),
+                            bloodType: selectedBloodType ?? '',
+                            allergies: allergiesController.text.trim(),
+                            conditions: conditionsController.text.trim(),
+                            emergencyName:
+                            emergencyNameController.text.trim(),
+                            emergencyPhone: emergencyPhone,
+                            notes: notesController.text.trim(),
+                          );
+                        },
+                        child: const Text('Save Medical Info'),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         );
       },
     );
@@ -688,7 +763,10 @@ class _PatientDetailViewState extends State<PatientDetailView>
           labelStyle: const TextStyle(fontWeight: FontWeight.bold),
           tabs: const [
             Tab(icon: Icon(Icons.medication_outlined), text: 'Doses'),
-            Tab(icon: Icon(Icons.medical_information_outlined), text: 'Medical'),
+            Tab(
+              icon: Icon(Icons.medical_information_outlined),
+              text: 'Medical',
+            ),
             Tab(icon: Icon(Icons.history), text: 'History'),
           ],
         ),
@@ -884,12 +962,7 @@ class _PatientDetailViewState extends State<PatientDetailView>
             chipCard('Allergies', info.allergies!.split(',')),
           if (info.conditions != null && info.conditions!.isNotEmpty)
             chipCard('Conditions', info.conditions!.split(',')),
-          infoCard('Emergency Contact', [
-            if (info.emergencyName != null)
-              infoRow('Name', info.emergencyName!),
-            if (info.emergencyPhone != null)
-              infoRow('Phone', info.emergencyPhone!),
-          ]),
+          emergencyContactCard(info),
           if (info.notes != null && info.notes!.isNotEmpty)
             infoCard('Notes', [
               Text(
@@ -897,6 +970,64 @@ class _PatientDetailViewState extends State<PatientDetailView>
                 style: const TextStyle(color: AppTheme.textDark),
               ),
             ]),
+        ],
+      ),
+    );
+  }
+
+  Widget emergencyContactCard(MedicalInfoModel info) {
+    final hasName =
+        info.emergencyName != null && info.emergencyName!.trim().isNotEmpty;
+    final hasPhone =
+        info.emergencyPhone != null && info.emergencyPhone!.trim().isNotEmpty;
+
+    if (!hasName && !hasPhone) {
+      return const SizedBox.shrink();
+    }
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE8EEF4)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'EMERGENCY CONTACT',
+            style: TextStyle(
+              fontSize: 11,
+              color: AppTheme.textLight,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          if (hasName) infoRow('Name', info.emergencyName!),
+
+          if (hasPhone) ...[
+            infoRow('Phone', info.emergencyPhone!),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              height: 46,
+              child: ElevatedButton.icon(
+                onPressed: () => callEmergencyContact(info.emergencyPhone!),
+                icon: const Icon(Icons.call, color: Colors.white),
+                label: const Text(
+                  'Call Emergency Contact',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -1026,8 +1157,7 @@ class _PatientDetailViewState extends State<PatientDetailView>
             ),
           ),
           Text(event.status),
-          if (time != null)
-            Text('  ${time.day}/${time.month}/${time.year}'),
+          if (time != null) Text('  ${time.day}/${time.month}/${time.year}'),
         ],
       ),
     );

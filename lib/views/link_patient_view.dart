@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 
 import '../controllers/link_patient_controller.dart';
@@ -23,11 +24,28 @@ class _LinkPatientViewState extends State<LinkPatientView> {
       msg: message,
       toastLength: Toast.LENGTH_SHORT,
       gravity: ToastGravity.BOTTOM,
+      fontSize: 16,
     );
   }
 
+  Future<void> pastePatientId() async {
+    final clipboardData = await Clipboard.getData(Clipboard.kTextPlain);
+    final copiedText = clipboardData?.text?.trim();
+
+    if (copiedText == null || copiedText.isEmpty) {
+      showToast('Clipboard is empty');
+      return;
+    }
+
+    setState(() {
+      patientIdController.text = copiedText;
+    });
+  }
+
   Future<void> linkPatient() async {
-    if (patientIdController.text.trim().isEmpty) {
+    final patientId = patientIdController.text.trim();
+
+    if (patientId.isEmpty) {
       showToast('Please enter patient ID');
       return;
     }
@@ -35,9 +53,7 @@ class _LinkPatientViewState extends State<LinkPatientView> {
     setState(() => loading = true);
 
     try {
-      await linkPatientController.linkPatient(
-        patientIdController.text.trim(),
-      );
+      await linkPatientController.linkPatient(patientId);
 
       if (!mounted) return;
 
@@ -84,7 +100,9 @@ class _LinkPatientViewState extends State<LinkPatientView> {
                   size: 42,
                 ),
               ),
+
               const SizedBox(height: 24),
+
               const Text(
                 'Link Patient by ID',
                 style: TextStyle(
@@ -93,7 +111,9 @@ class _LinkPatientViewState extends State<LinkPatientView> {
                   color: AppTheme.textDark,
                 ),
               ),
+
               const SizedBox(height: 8),
+
               const Text(
                 'Enter the patient ID to connect them to your caregiver account.',
                 textAlign: TextAlign.center,
@@ -103,15 +123,23 @@ class _LinkPatientViewState extends State<LinkPatientView> {
                   height: 1.5,
                 ),
               ),
+
               const SizedBox(height: 30),
+
               TextField(
                 controller: patientIdController,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Patient ID',
-                  prefixIcon: Icon(Icons.badge_outlined),
+                  prefixIcon: const Icon(Icons.badge_outlined),
+                  suffixIcon: IconButton(
+                    icon: const Icon(Icons.content_paste_outlined),
+                    onPressed: pastePatientId,
+                  ),
                 ),
               ),
+
               const SizedBox(height: 28),
+
               SizedBox(
                 width: double.infinity,
                 height: 54,

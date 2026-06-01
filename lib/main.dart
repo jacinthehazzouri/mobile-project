@@ -1,3 +1,6 @@
+import 'dart:async';
+
+import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -6,6 +9,9 @@ import 'theme/app_theme.dart';
 import 'views/login_view.dart';
 import 'views/patient_dashboard_view.dart';
 import 'views/caregiver_dashboard_view.dart';
+import 'views/reset_password_view.dart';
+
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -27,7 +33,7 @@ Future<void> main() async {
   );
 }
 
-class SmartMedBoxApp extends StatelessWidget {
+class SmartMedBoxApp extends StatefulWidget {
   final bool isLoggedIn;
   final String? role;
 
@@ -38,12 +44,62 @@ class SmartMedBoxApp extends StatelessWidget {
   });
 
   @override
+  State<SmartMedBoxApp> createState() => _SmartMedBoxAppState();
+}
+
+class _SmartMedBoxAppState extends State<SmartMedBoxApp> {
+  late final AppLinks appLinks;
+  StreamSubscription<Uri>? linkSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+
+    appLinks = AppLinks();
+    listenToDeepLinks();
+    listenToPasswordRecovery();
+  }
+
+  void listenToDeepLinks() {
+    linkSubscription = appLinks.uriLinkStream.listen((uri) {
+      if (uri.scheme == 'io.supabase.smartmedbox' &&
+          uri.host == 'reset-password') {
+        openResetPasswordPage();
+      }
+    });
+  }
+
+  void listenToPasswordRecovery() {
+    Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+      if (data.event == AuthChangeEvent.passwordRecovery) {
+        openResetPasswordPage();
+      }
+    });
+  }
+
+  void openResetPasswordPage() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      navigatorKey.currentState?.push(
+        MaterialPageRoute(
+          builder: (_) => const ResetPasswordView(),
+        ),
+      );
+    });
+  }
+
+  @override
+  void dispose() {
+    linkSubscription?.cancel();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     Widget startPage;
 
-    if (!isLoggedIn) {
+    if (!widget.isLoggedIn) {
       startPage = const LoginView();
-    } else if (role == 'caregiver') {
+    } else if (widget.role == 'caregiver') {
       startPage = const CaregiverDashboardView();
     } else {
       startPage = const PatientDashboardView();
@@ -53,6 +109,7 @@ class SmartMedBoxApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'Smart MedBox',
       theme: AppTheme.lightTheme,
+      navigatorKey: navigatorKey,
       home: startPage,
     );
   }

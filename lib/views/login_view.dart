@@ -23,6 +23,17 @@ class _LoginViewState extends State<LoginView> {
   final AuthController authController = AuthController();
 
   bool loading = false;
+  bool resetLoading = false;
+  bool hidePassword = true;
+
+  void showToast(String message) {
+    Fluttertoast.showToast(
+      msg: message,
+      toastLength: Toast.LENGTH_SHORT,
+      gravity: ToastGravity.BOTTOM,
+      fontSize: 16,
+    );
+  }
 
   Future<void> login() async {
     setState(() => loading = true);
@@ -58,16 +69,31 @@ class _LoginViewState extends State<LoginView> {
       }
     } catch (e) {
       if (!mounted) return;
-
-      Fluttertoast.showToast(
-        msg: 'Login failed',
-        toastLength: Toast.LENGTH_SHORT,
-        gravity: ToastGravity.BOTTOM,
-      );
+      showToast('Login failed');
     }
 
     if (mounted) {
       setState(() => loading = false);
+    }
+  }
+
+  Future<void> sendResetEmail() async {
+    setState(() => resetLoading = true);
+
+    try {
+      await authController.sendPasswordResetEmail(
+        emailController.text.trim(),
+      );
+
+      if (!mounted) return;
+      showToast('Password reset email sent');
+    } catch (e) {
+      if (!mounted) return;
+      showToast(e.toString().replaceAll('Exception: ', ''));
+    }
+
+    if (mounted) {
+      setState(() => resetLoading = false);
     }
   }
 
@@ -84,10 +110,14 @@ class _LoginViewState extends State<LoginView> {
       backgroundColor: AppTheme.background,
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 36),
+          padding: const EdgeInsets.symmetric(
+            horizontal: 24,
+            vertical: 36,
+          ),
           child: Column(
             children: [
               const SizedBox(height: 30),
+
               Container(
                 width: 86,
                 height: 86,
@@ -108,7 +138,9 @@ class _LoginViewState extends State<LoginView> {
                   size: 44,
                 ),
               ),
+
               const SizedBox(height: 24),
+
               const Text(
                 'Welcome Back',
                 style: TextStyle(
@@ -117,7 +149,9 @@ class _LoginViewState extends State<LoginView> {
                   color: AppTheme.textDark,
                 ),
               ),
+
               const SizedBox(height: 8),
+
               const Text(
                 'Login to manage your medicine reminders and smart medbox.',
                 textAlign: TextAlign.center,
@@ -127,7 +161,9 @@ class _LoginViewState extends State<LoginView> {
                   height: 1.5,
                 ),
               ),
+
               const SizedBox(height: 34),
+
               TextField(
                 controller: emailController,
                 keyboardType: TextInputType.emailAddress,
@@ -136,16 +172,48 @@ class _LoginViewState extends State<LoginView> {
                   prefixIcon: Icon(Icons.email_outlined),
                 ),
               ),
+
               const SizedBox(height: 16),
+
               TextField(
                 controller: passwordController,
-                obscureText: true,
-                decoration: const InputDecoration(
+                obscureText: hidePassword,
+                decoration: InputDecoration(
                   labelText: 'Password',
-                  prefixIcon: Icon(Icons.lock_outline),
+                  prefixIcon: const Icon(Icons.lock_outline),
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      hidePassword
+                          ? Icons.visibility_off_outlined
+                          : Icons.visibility_outlined,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        hidePassword = !hidePassword;
+                      });
+                    },
+                  ),
                 ),
               ),
-              const SizedBox(height: 26),
+
+              const SizedBox(height: 4),
+
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: resetLoading ? null : sendResetEmail,
+                  child: Text(
+                    resetLoading ? 'Sending...' : 'Forgot Password?',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.primary,
+                    ),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 12),
+
               SizedBox(
                 width: double.infinity,
                 height: 54,
@@ -163,7 +231,9 @@ class _LoginViewState extends State<LoginView> {
                       : const Text('Login'),
                 ),
               ),
+
               const SizedBox(height: 18),
+
               TextButton(
                 onPressed: () {
                   Navigator.push(
