@@ -26,6 +26,13 @@ class AuthController {
     return ProfileModel.fromJson(profileData);
   }
 
+  Future<void> loginWithGoogle() async {
+    await _supabase.auth.signInWithOAuth(
+      OAuthProvider.google,
+      redirectTo: 'io.supabase.smartmedbox://login-callback',
+    );
+  }
+
   Future<void> register({
     required String name,
     required String email,
