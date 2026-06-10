@@ -50,6 +50,7 @@ class SmartMedBoxApp extends StatefulWidget {
 class _SmartMedBoxAppState extends State<SmartMedBoxApp> {
   late final AppLinks appLinks;
   StreamSubscription<Uri>? linkSubscription;
+  StreamSubscription<AuthState>? authSubscription;
 
   @override
   void initState() {
@@ -57,7 +58,7 @@ class _SmartMedBoxAppState extends State<SmartMedBoxApp> {
 
     appLinks = AppLinks();
     listenToDeepLinks();
-    listenToPasswordRecovery();
+    listenToAuthChanges();
   }
 
   void listenToDeepLinks() {
@@ -69,12 +70,72 @@ class _SmartMedBoxAppState extends State<SmartMedBoxApp> {
     });
   }
 
-  void listenToPasswordRecovery() {
-    Supabase.instance.client.auth.onAuthStateChange.listen((data) {
-      if (data.event == AuthChangeEvent.passwordRecovery) {
-        openResetPasswordPage();
+  void listenToAuthChanges() {
+    authSubscription =
+        Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+          if (data.event == AuthChangeEvent.passwordRecovery) {
+            openResetPasswordPage();
+          }
+
+          if (data.event == AuthChangeEvent.signedIn) {
+            handleGoogleLogin();
+          }
+        });
+  }
+
+  Future<void> handleGoogleLogin() async {
+    try {
+      final supabase = Supabase.instance.client;
+      final user = supabase.auth.currentUser;
+
+      if (user == null) return;
+
+      final profileData = await supabase
+          .from('profiles')
+          .select()
+          .eq('id', user.id)
+          .maybeSingle();
+
+      if (profileData == null) {
+        navigatorKey.currentState?.pushAndRemoveUntil(
+          MaterialPageRoute(
+            builder: (_) => const LoginView(),
+          ),
+              (route) => false,
+        );
+        return;
       }
-    });
+
+      final role = profileData['role'] as String;
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool('isLoggedIn', true);
+      await prefs.setString('userId', user.id);
+      await prefs.setString('role', role);
+
+      if (role == 'caregiver') {
+        navigatorKey.currentState?.pushAndRemoveUntil(
+          MaterialPageRoute(
+            builder: (_) => const CaregiverDashboardView(),
+          ),
+              (route) => false,
+        );
+      } else {
+        navigatorKey.currentState?.pushAndRemoveUntil(
+          MaterialPageRoute(
+            builder: (_) => const PatientDashboardView(),
+          ),
+              (route) => false,
+        );
+      }
+    } catch (e) {
+      navigatorKey.currentState?.pushAndRemoveUntil(
+        MaterialPageRoute(
+          builder: (_) => const LoginView(),
+        ),
+            (route) => false,
+      );
+    }
   }
 
   void openResetPasswordPage() {
@@ -90,6 +151,7 @@ class _SmartMedBoxAppState extends State<SmartMedBoxApp> {
   @override
   void dispose() {
     linkSubscription?.cancel();
+    authSubscription?.cancel();
     super.dispose();
   }
 

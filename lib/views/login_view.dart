@@ -77,6 +77,15 @@ class _LoginViewState extends State<LoginView> {
     }
   }
 
+  Future<void> loginWithGoogle() async {
+    try {
+      await authController.loginWithGoogle();
+    } catch (e) {
+      if (!mounted) return;
+      showToast('Google login failed');
+    }
+  }
+
   Future<void> sendResetEmail() async {
     setState(() => resetLoading = true);
 
@@ -229,6 +238,23 @@ class _LoginViewState extends State<LoginView> {
                     ),
                   )
                       : const Text('Login'),
+                ),
+              ),
+
+              const SizedBox(height: 14),
+
+              SizedBox(
+                width: double.infinity,
+                height: 54,
+                child: OutlinedButton.icon(
+                  onPressed: loginWithGoogle,
+                  icon: const Icon(Icons.g_mobiledata, size: 34),
+                  label: const Text(
+                    'Continue with Google',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
               ),
 
