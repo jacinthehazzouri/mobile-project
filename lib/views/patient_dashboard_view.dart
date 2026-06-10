@@ -12,6 +12,7 @@ import '../theme/app_theme.dart';
 import 'login_view.dart';
 import 'manage_profile_view.dart';
 import 'patient_detail_view.dart';
+import 'medbot_view.dart';
 
 class PatientDashboardView extends StatefulWidget {
   const PatientDashboardView({super.key});
@@ -433,6 +434,15 @@ class _PatientDashboardViewState extends State<PatientDashboardView> {
         ],
       ),
       endDrawer: profileDrawer(context),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const MedBotView()),
+        ),
+        backgroundColor: AppTheme.primary,
+        tooltip: 'Ask MedBot',
+        child: const Icon(Icons.smart_toy_outlined, color: Colors.white),
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: FutureBuilder<ProfileModel>(
