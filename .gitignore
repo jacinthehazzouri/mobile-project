@@ -63,3 +63,5 @@ windows/flutter/generated_plugins.cmake
 pubspec.lock
 devtools_options.yaml
 local.properties
+
+lib/utils/config.dart

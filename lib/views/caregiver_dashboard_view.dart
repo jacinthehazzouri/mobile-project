@@ -11,6 +11,7 @@ import '../theme/app_theme.dart';
 import 'link_patient_view.dart';
 import 'login_view.dart';
 import 'manage_profile_view.dart';
+import 'medbot_view.dart';
 import 'patients_list_view.dart';
 
 class CaregiverDashboardView extends StatefulWidget {
@@ -227,6 +228,15 @@ class _CaregiverDashboardViewState extends State<CaregiverDashboardView> {
         ],
       ),
       endDrawer: profileDrawer(context),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const MedBotView()),
+        ),
+        backgroundColor: AppTheme.primary,
+        tooltip: 'Ask MedBot',
+        child: const Icon(Icons.smart_toy_outlined, color: Colors.white),
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
         child: Column(
